@@ -1,30 +1,28 @@
 # Analysis Plan: Weak-to-Strong Jailbreaking
 
-## Critical Prerequisite: Validate the Behavioral Foundation
+## Kill Gate: PASSED (2026-04-05)
 
-Before running ANY interp analysis, confirm the stealth vs control behavioral difference is statistically significant. The hardened control arms are still running in Turnstile.
+Mann-Whitney U on per-round ASR (stealth vs control, 2 seeds, 19 paired rounds):
+- **Pooled: p = 0.024, Cohen's d = 0.68** — significant, medium-to-large effect
+- Seed 42 (11 rounds): Wilcoxon p = 0.002, d = 1.02
+- Seed 123 (8 rounds): p = 0.23 (noisier, driven by round-3 outlier at 60% ASR)
+- Results in `figures/statistical_test.json`
 
-**Kill gate**: Once control arms finish, compute Mann-Whitney U on per-round ASR (stealth vs control). If p > 0.10 or Cohen's d < 0.3, **STOP** all interp analyses. Reframe paper around "probe predicts but doesn't prevent" + "DPO >> SFT."
+**Proceed with all mechanistic analyses.**
 
 ---
 
 ## Execution Sequence (13 days)
 
 ```
-Days 1-2:   Control arms finish (running on Vast.ai). Run statistical test.
-            Analysis 1 (Layer Sweep) — CPU only, can run in parallel.
-
-            === KILL GATE ===
-            Stealth vs control: p < 0.05, Cohen's d > 0.5 → proceed.
-            p > 0.10 or d < 0.3 → stop interp, reframe paper.
-            ===
-
-Days 3-4:   Analysis 2 (Logit Lens Turn-by-Turn) — needs GPU
-Day 5:      Analysis 3 (Stealth Feature Redirection Map) + Analysis 7 (Feature Stability)
-Days 6-7:   Analysis 5 (RepE / Refusal Direction Trajectories)
-Days 8-9:   Analysis 4 (Attention Forensics) — only if earlier analyses show structure
-Days 10-11: Analysis 6 (Activation Patching) — only if attention forensics succeeded
-Days 12-13: Write up + figures
+Day 1:      Kill gate (PASSED), Analysis 1 Layer Sweep (DONE)          ✅
+Day 2:      Analysis 2 Logit Lens Turn-by-Turn (DONE)                  ✅
+Day 3:      Analysis 3 Stealth Feature Redirection Map                  ← NOW
+Day 4-5:    Analysis 5 RepE / Refusal Direction Trajectories
+Day 6-7:    Analysis 4 Attention Forensics
+Day 8-9:    Analysis 6 Activation Patching (layer 31 only — scoped by logit lens)
+Day 10:     Analysis 7 Cross-Round Feature Stability
+Days 11-13: Write up + figures
 ```
 
 ---
@@ -46,32 +44,28 @@ Days 12-13: Write up + figures
 
 **Time**: ~1 day.
 
+**Result**: AUC rises monotonically 0.774 → 0.842. No sharp peak. Distributed safety.
+
 ---
 
-## Analysis 2: Logit Lens Turn-by-Turn
+## Analysis 2: Logit Lens Turn-by-Turn — DONE (2026-04-05)
 
-**Priority**: SECOND. Highest novelty — this figure doesn't exist in the literature for multi-turn jailbreaks.
+**Inputs**: 40 wins + 40 losses from stealth_hard_s42. Full conversation text replayed through victim.
 
-**Inputs**: 30-50 stealth wins, 30-50 control wins, 50 failures. Full conversation text for replay.
+**Method**: At each layer (every 4th) and turn (0-4), project hidden state through RMSNorm + lm_head. Compute P(compliance tokens) - P(refusal tokens).
 
-**Method**:
-1. Load Llama-3.1-8B-Instruct into TransformerLens
-2. For each conversation, forward pass at each turn (5 per conversation)
-3. At each layer (every 4th), apply unembedding matrix. Compute softmax.
-4. Define compliance tokens: {"Sure", "Here", "Step", "Okay", "Certainly"} and refusal tokens: {"Sorry", "cannot", "can't", "unable", "apologize"}
-5. Compute P(compliance) - P(refusal) at each (layer, turn)
-6. Average within condition. Produce 2D heatmap (turn × layer × compliance delta)
+**Results**:
+- Layers 0-24: near-zero signal. Decision NOT formed in middle layers.
+- Layer 31 dominates. Wins flip: -0.45 (turn 0) → -0.06 (turn 2) → +0.11 (turn 4)
+- Losses stay negative: -0.22 → -0.03
+- Win-loss gap at turn 4, layer 31: +0.14
+- Early turns INCREASE refusal (model detects attack) → subsequent turns erode it
 
-**Positive result**: Clear "flip point" at specific layer-turn. Stealth wins flip differently than control wins (different layer, or gradual vs abrupt).
+**Key finding**: Multi-turn jailbreaks = gradual erosion of a final-layer refusal signal.
 
-**Null result**: Identical heatmaps for stealth and control → same mechanism, stealth just does it better.
+**Tension with Analysis 1**: Probe detects at all layers (distributed representation). Compliance decision at layer 31 only (localized action). The model KNOWS broadly but only ACTS at the end.
 
-**Failure modes**:
-- Logit lens less informative at early layers with RMSNorm → use tuned lens as backup
-- 5-turn conversations can be 2000+ tokens → budget 40GB+ VRAM
-- "I" appears in both compliance and refusal sets → use full distribution, not just specific tokens
-
-**Time**: 2-3 days.
+**Time**: ~3 hours GPU on RTX 3090 ($0.12/hr).
 
 ---
 
