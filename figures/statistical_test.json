@@ -1,0 +1,39 @@
+{
+  "seeds": [
+    {
+      "seed": "s42",
+      "n_rounds": 11,
+      "stealth_mean": 0.1981818181818182,
+      "control_mean": 0.14545454545454548,
+      "difference": 0.052727272727272734,
+      "mwu_U": 93.0,
+      "mwu_p": 0.017574398230949202,
+      "wilcoxon_W": 63.0,
+      "wilcoxon_p": 0.00244140625,
+      "cohens_d": 1.0230693110359494
+    },
+    {
+      "seed": "s123",
+      "n_rounds": 8,
+      "stealth_mean": 0.215,
+      "control_mean": 0.15875,
+      "difference": 0.056249999999999994,
+      "mwu_U": 34.0,
+      "mwu_p": 0.4363360889065895,
+      "wilcoxon_W": 14.0,
+      "wilcoxon_p": 0.22904411735790503,
+      "cohens_d": 0.5264148132353118
+    }
+  ],
+  "pooled": {
+    "n_stealth": 19,
+    "n_control": 19,
+    "stealth_mean": 0.20526315789473684,
+    "control_mean": 0.15105263157894738,
+    "difference": 0.05421052631578946,
+    "mwu_U": 248.5,
+    "mwu_p": 0.02397563622325892,
+    "cohens_d": 0.6775582667922545,
+    "kill_gate": "PASS"
+  }
+}
