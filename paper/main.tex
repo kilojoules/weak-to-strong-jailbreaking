@@ -28,7 +28,7 @@ Mechanistic analyses reveal a striking dissociation between safety representatio
 (1)~jailbreak-relevant information is distributed across all layers (probe AUC 0.77 at layer~0, rising to 0.84 at layer~31), but the compliance decision manifests exclusively at the final layer, where a logit lens shows the refusal signal eroding from $-0.45$ to $+0.11$ across conversation turns;
 (2)~successful jailbreaks activate a sparse set of SAE features while suppressing refusal-associated features, and four of 16{,}384 features persist across $>$80\% of adversarial rounds, suggesting architectural rather than strategic vulnerabilities;
 (3)~projection onto the refusal direction \citep{arditi2024refusal} reveals rapid collapse after the first turn rather than gradual erosion.
-Against a hardening victim, a stealth-trained adversary that additionally minimizes probe detection shows a marginal advantage (+3.1~pp, $p=0.061$), with a significant effect in one of three seeds ($p=0.002$).
+A stealth-trained variant that additionally minimizes probe detection does not significantly outperform a control adversary against hardening victims ($+2.2$~pp, $p=0.085$ across 3 seeds), indicating that black-box conversational strategies cannot reliably evade representation-based monitors.
 The victim model ``knows'' it is being attacked at every layer and every turn---but this knowledge does not reliably translate into refusal.
 These findings extend recent theoretical work on the dissociation between safety recognition and safety execution \citep{wu2026knowingwithoutacting} with direct empirical evidence under adversarial pressure.
 \end{abstract}
@@ -60,7 +60,7 @@ Our contributions are:
 
   \item \textbf{Persistent SAE features across adversarial rounds.} We identify four SAE features (out of 16{,}384) that the adversary consistently exploits across 13 rounds of self-play, two of which are also among the top differentially activated features between wins and losses.
 
-  \item \textbf{Marginal evidence for stealth evasion.} A stealth-trained adversary shows a +3.1~pp ASR advantage against a hardening victim ($p=0.061$), consistent with---but weaker than---the white-box evasion demonstrated by \citet{bailey2024obfuscated}.
+  \item \textbf{Negative stealth result.} A stealth-trained adversary does not significantly outperform controls against hardening victims ($+2.2$~pp, $p=0.085$, 3 seeds). Black-box conversational evasion is much harder than the white-box gradient evasion of \citet{bailey2024obfuscated}, and in our setup, does not succeed.
 \end{enumerate}
 
 \paragraph{Distinction from prior work.}
@@ -160,24 +160,24 @@ The pooled effect is $+3.1$~pp ($p=0.061$, $d=0.46$).
 \centering
 \begin{tabular}{lccccc}
 \toprule
-\textbf{Seed} & \textbf{Rounds} & \textbf{Stealth} & \textbf{Control} & \textbf{$\Delta$} & \textbf{$p$} \\
+\textbf{Seed} & \textbf{Rounds} & \textbf{Stealth} & \textbf{Control} & \textbf{$\Delta$} & \textbf{$p$ (MWU)} \\
 \midrule
 42  & 15 & 18.6\% & 14.7\% & $+3.9$ pp & 0.023 \\
 123 & 15 & 18.7\% & 16.1\% & $+2.5$ pp & 0.57 \\
-456 &  4 & 17.3\% & 15.0\% & $+2.2$ pp & 0.24 \\
+456 & 15 & 16.2\% & 15.9\% & $+0.3$ pp & 0.25 \\
 \midrule
-\textbf{Pooled} & \textbf{34} & \textbf{18.5\%} & \textbf{15.4\%} & $\mathbf{+3.1}$ \textbf{pp} & \textbf{0.061} \\
+\textbf{Mean $\pm$ SD} & & $\mathbf{17.8 \pm 1.1}$\textbf{\%} & $\mathbf{15.6 \pm 0.6}$\textbf{\%} & $\mathbf{+2.2}$ \textbf{pp} & \textbf{0.085} \\
 \bottomrule
 \end{tabular}
-\caption{Hardened victim: stealth vs.\ control ASR. Pooled Mann-Whitney $U$, one-sided, $d=0.46$.
-We present this result as suggestive, not conclusive.
-The effect is strongest in early-to-mid rounds (rounds 1--8: $+5$--$14$~pp for seed~42) and converges by rounds 10--14 as the victim's defenses saturate.}
+\caption{Hardened victim: stealth vs.\ control ASR across 3 seeds (15 rounds each, 45 paired rounds total). Pooled Mann-Whitney $U$, one-sided, $d=0.36$. Seed-level paired $t$-test ($n=3$): $p=0.084$. The effect is driven primarily by seed~42; seeds~123 and~456 show small, non-significant differences. Late rounds ($\geq 5$): no significant difference ($p=0.29$).}
 \label{tab:hardened}
 \end{table}
 
-This result is weaker than the white-box stealth evasion of \citet{bailey2024obfuscated}, who reduce probe recall from 100\% to 0\%.
-Our adversary operates under a much more constrained threat model (black-box, multi-turn dialogue), producing a correspondingly weaker effect.
-The finding is consistent with---but not a strong confirmation of---the hypothesis that safety monitors reveal exploitable structure.
+\textbf{The stealth behavioral result is negative.} With all three seeds complete, the stealth advantage does not reach significance at any conventional threshold. Seed~42 shows a real effect ($d=0.83$), but it does not replicate in seeds~123 or~456. We report this honestly: the stealth training objective does not reliably improve attacks against hardening defenders in our setup.
+
+This contrasts with the white-box stealth evasion of \citet{bailey2024obfuscated}, who reduce probe recall from 100\% to 0\% using gradient-based optimization with direct probe access.
+Our black-box adversary cannot achieve comparable evasion through conversational strategies alone.
+The representation-behavior gap (Section~\ref{sec:mechanistic}) exists regardless of the stealth result: the victim detects attacks at AUC~0.97 but complies at 18--26\% even without any stealth training.
 
 \subsection{DPO as a Necessary Condition}
 
